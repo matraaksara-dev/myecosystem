@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matra Aksara — Ecosystem Flowchart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary:#ffffff; --bg-secondary:#f8fafc; --bg-tertiary:#f1f5f9;
+      --text-primary:#0f172a; --text-secondary:#334155; --text-muted:#64748b;
+      --color-primary:#1e3a8a; --color-accent:#3b82f6; --color-accent-light:#eff6ff;
+      --color-border:#e2e8f0;
+      --font-sans:'Plus Jakarta Sans',sans-serif; --font-mono:'JetBrains Mono',monospace;
+      /* category colors */
+      --cat-editor:#1e3a8a;   --cat-editor-bg:#eff6ff;   --cat-editor-bdr:#3b82f6;
+      --cat-ai:#7c3aed;       --cat-ai-bg:#f5f3ff;       --cat-ai-bdr:#8b5cf6;
+      --cat-mcp:#b45309;      --cat-mcp-bg:#fffbeb;      --cat-mcp-bdr:#f59e0b;
+      --cat-backend:#166534;  --cat-backend-bg:#f0fdf4;  --cat-backend-bdr:#22c55e;
+      --cat-repo:#0f172a;     --cat-repo-bg:#f8fafc;     --cat-repo-bdr:#64748b;
+      --cat-auto:#86198f;     --cat-auto-bg:#fdf4ff;     --cat-auto-bdr:#d946ef;
+      --cat-agent:#075985;    --cat-agent-bg:#e0f2fe;    --cat-agent-bdr:#0ea5e9;
+      --cat-output:#9a3412;   --cat-output-bg:#fff7ed;   --cat-output-bdr:#f97316;
+      /* project lane colors */
+      --p1:#2563eb; --p2:#d946ef; --p3:#059669; --p4:#f59e0b; --p5:#ef4444; --p6:#8b5cf6;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:var(--font-sans);}
+    body{background:var(--bg-secondary);}
+
+    /* ── CANVAS ───────────────────────────────────── */
+    #canvas{
+      position:relative;width:100vw;height:100vh;
+      overflow:hidden;cursor:grab;user-select:none;
+      background-image:radial-gradient(#cbd5e1 1px,transparent 1px);
+      background-size:28px 28px;
+    }
+    #canvas:active{cursor:grabbing;}
+    #workspace{position:absolute;top:0;left:0;transform-origin:0 0;}
+    #svg-layer{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;}
+
+    /* ── NODES ────────────────────────────────────── */
+    .node{
+      position:absolute;width:230px;
+      background:#fff;border-radius:14px;
+      border:1.5px solid var(--color-border);
+      box-shadow:0 4px 16px rgba(0,0,0,.06);
+      cursor:move;z-index:10;
+      transition:box-shadow .2s,border-color .2s;
+    }
+    .node:hover{box-shadow:0 12px 36px rgba(30,58,138,.14);border-color:#94a3b8;z-index:20;}
+    .node.selected{border-color:var(--color-accent);box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+
+    .node-header{
+      padding:11px 14px 10px;
+      display:flex;align-items:center;gap:9px;
+      border-radius:12px 12px 0 0;border-bottom:1px solid rgba(0,0,0,.06);
+    }
+    .node-icon{font-size:18px;flex-shrink:0;}
+    .node-name{font-weight:700;font-size:12.5px;line-height:1.3;flex:1;}
+    .node-tag{font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:99px;
+      background:rgba(255,255,255,.45);color:inherit;white-space:nowrap;letter-spacing:.4px;text-transform:uppercase;}
+
+    .node-body{padding:10px 14px 12px;font-size:11.5px;color:var(--text-secondary);line-height:1.55;}
+    .node-body ul{margin-left:14px;margin-top:5px;}
+    .node-body li{margin-bottom:2px;}
+    .node-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;
+      margin:2px 2px 0 0;background:rgba(0,0,0,.05);
+    }
+
+    /* Port dots */
+    .port{
+      width:13px;height:13px;border-radius:50%;
+      position:absolute;top:50%;transform:translateY(-50%);
+      border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.18);
+      z-index:15;background:#94a3b8;transition:background .15s,transform .15s;
+    }
+    .node:hover .port{background:var(--color-accent);transform:translateY(-50%) scale(1.25);}
+    .port.input{left:-7px;} .port.output{right:-7px;}
+
+    /* Section heading node */
+    .node.section-label{
+      width:200px;background:transparent;border:none;box-shadow:none;cursor:default;
+    }
+    .section-label .node-header{
+      border-radius:8px;border-bottom:none;padding:8px 14px;
+      font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+    }
+
+    /* Project lane label nodes */
+    .node.lane-label{
+      width:180px;border:2px dashed;background:rgba(255,255,255,.6);
+      backdrop-filter:blur(4px);cursor:default;
+    }
+    .lane-label .node-header{border-radius:11px 11px 0 0;}
+
+    /* ── LEGEND ───────────────────────────────────── */
+    #legend{
+      position:absolute;bottom:24px;left:24px;z-index:200;
+      background:rgba(255,255,255,.95);backdrop-filter:blur(8px);
+      border:1px solid var(--color-border);border-radius:12px;
+      padding:14px 18px;box-shadow:0 4px 20px rgba(0,0,0,.08);
+      max-width:320px;
+    }
+    #legend h3{font-size:11px;font-weight:800;letter-spacing:.8px;color:var(--text-muted);
+      text-transform:uppercase;margin-bottom:10px;}
+    .legend-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11.5px;color:var(--text-secondary);}
+    .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .legend-line{width:28px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-dashed{background:repeating-linear-gradient(90deg,#94a3b8 0,#94a3b8 5px,transparent 5px,transparent 10px);}
+
+    /* ── HEADER BAR ───────────────────────────────── */
+    #header{
+      position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:200;
+      background:rgba(255,255,255,.96);backdrop-filter:blur(8px);
+      border:1px solid var(--color-border);border-radius:14px;
+      padding:12px 24px;box-shadow:0 4px 20px rgba(0,0,0,.08);
+      display:flex;align-items:center;gap:16px;
+    }
+    .header-brand{font-weight:800;font-size:15px;color:var(--color-primary);display:flex;align-items:center;gap:8px;}
+    .header-sep{width:1px;height:24px;background:var(--color-border);}
+    .header-sub{font-size:12px;color:var(--text-muted);}
+    .btn-reset{
+      padding:6px 14px;background:var(--color-accent-light);color:var(--color-accent);
+      border:1px solid #bfdbfe;border-radius:8px;font-size:11.5px;font-weight:700;
+      cursor:pointer;transition:all .15s;
+    }
+    .btn-reset:hover{background:#dbeafe;}
+
+    /* ── PROJECT TAB BAR ──────────────────────────── */
+    #project-tabs{
+      position:absolute;top:20px;right:24px;z-index:200;
+      display:flex;flex-direction:column;gap:6px;
+    }
+    .ptab{
+      padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;
+      border:1.5px solid;cursor:pointer;transition:all .15s;
+      background:rgba(255,255,255,.9);backdrop-filter:blur(6px);
+      white-space:nowrap;
+    }
+    .ptab.active,.ptab:hover{opacity:1;color:#fff;}
+
+    /* Fade state */
+    .node.dim{opacity:.18;}
+    .node.dim .port{opacity:0;}
+
+    /* ── SVG CONNECTIONS ──────────────────────────── */
+    .edge-solid{fill:none;stroke:#94a3b8;stroke-width:2;stroke-linecap:round;}
+    .edge-flow{fill:none;stroke-width:2;stroke-linecap:round;
+      stroke-dasharray:7 9;animation:flow 1.2s linear infinite;opacity:.7;}
+    @keyframes flow{from{stroke-dashoffset:16;}to{stroke-dashoffset:0;}}
+
+    /* Arrow markers defined in SVG defs */
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Matra Aksara — Ecosystem Flowchart
+  </div>
+  <div class="header-sep"></div>
+  <div class="header-sub">Drag nodes &amp; canvas · Scroll to zoom · Filter by project below</div>
+  <button class="btn-reset" onclick="resetView()">⟳ Reset</button>
+</div>
+
+<!-- PROJECT FILTER TABS -->
+<div id="project-tabs">
+  <div class="ptab" style="border-color:var(--p1);color:var(--p1);" data-proj="all" onclick="filterProject('all')">🌐 All Projects</div>
+  <div class="ptab" style="border-color:var(--p1);color:var(--p1);" data-proj="p1" onclick="filterProject('p1')">01 Full-Stack Coding</div>
+  <div class="ptab" style="border-color:var(--p2);color:var(--p2);" data-proj="p2" onclick="filterProject('p2')">02 UI/UX Design</div>
+  <div class="ptab" style="border-color:var(--p3);color:var(--p3);" data-proj="p3" onclick="filterProject('p3')">03 Data Analytics</div>
+  <div class="ptab" style="border-color:var(--p4);color:var(--p4);" data-proj="p4" onclick="filterProject('p4')">04 Brainstorming</div>
+  <div class="ptab" style="border-color:var(--p5);color:var(--p5);" data-proj="p5" onclick="filterProject('p5')">05 Konten Visual</div>
+  <div class="ptab" style="border-color:var(--p6);color:var(--p6);" data-proj="p6" onclick="filterProject('p6')">06 AI Agent Setup</div>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <h3>Legenda</h3>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-editor-bdr)"></div>VS Code Core</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-ai-bdr)"></div>AI Models / Roo Code</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-mcp-bdr)"></div>MCP Servers</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-backend-bdr)"></div>Backend & Database</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-repo-bdr)"></div>Repository & DevOps</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-auto-bdr)"></div>Automation</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-agent-bdr)"></div>AI Agent / Hermes</div>
+  <div class="legend-row"><div class="legend-dot" style="background:var(--cat-output-bdr)"></div>Output / Deployment</div>
+  <div style="margin-top:10px;border-top:1px solid var(--color-border);padding-top:10px;">
+    <div class="legend-row"><div class="legend-line" style="background:#94a3b8;"></div>Aliran Data</div>
+    <div class="legend-row"><div class="legend-line legend-dashed"></div>Konteks / Referensi</div>
+  </div>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas">
+  <div id="workspace">
+    <svg id="svg-layer">
+      <defs>
+        <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="#94a3b8"/>
+        </marker>
+        <marker id="arr-blue" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="#3b82f6"/>
+        </marker>
+        <marker id="arr-p1" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p1)"/>
+        </marker>
+        <marker id="arr-p2" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p2)"/>
+        </marker>
+        <marker id="arr-p3" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p3)"/>
+        </marker>
+        <marker id="arr-p4" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p4)"/>
+        </marker>
+        <marker id="arr-p5" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p5)"/>
+        </marker>
+        <marker id="arr-p6" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <polygon points="0 0, 7 3.5, 0 7" fill="var(--p6)"/>
+        </marker>
+      </defs>
+    </svg>
+    <div id="node-container"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA: NODES
+// ═══════════════════════════════════════════
+const NODES = [
+
+  // ── CORE: VS CODE ──────────────────────────────────────────────
+  {
+    id:'vscode', x:840, y:580, type:'editor', icon:'💻', name:'VS Code Workspace',
+    tag:'Core IDE', ports:['output'],
+    proj:['p1','p2','p3','p4','p5','p6'],
+    body:`<b>Pusat kendali seluruh ekosistem.</b> Bukan sekadar editor — ia adalah <i>agentic runtime</i> untuk semua 6 kategori proyek.
+    <ul>
+      <li>Mengelola ekstensi AI, linter, git</li>
+      <li>Menjalankan tasks via Command Palette</li>
+      <li>Membaca/menulis seluruh filesystem proyek</li>
+    </ul>`
+  },
+
+  // ── EXTENSIONS ─────────────────────────────────────────────────
+  {
+    id:'roocode', x:1130, y:420, type:'ai', icon:'🧠', name:'Roo Code / Zoo Code',
+    tag:'Agentic Coding', ports:['input','output'],
+    proj:['p1','p2','p3','p4','p6'],
+    body:`Loop <b>ReAct Agent</b>: Plan → Execute → Observe → Reflect.
+    <ul>
+      <li>Membaca & menulis file otomatis</li>
+      <li>Memanggil MCP tools</li>
+      <li>Menjalankan terminal commands</li>
+      <li>Self-debug: baca diagnostics ESLint</li>
+    </ul>`
+  },
+  {
+    id:'continue', x:1130, y:700, type:'ai', icon:'⚡', name:'Continue.dev',
+    tag:'FIM Autocomplete', ports:['input'],
+    proj:['p1','p2'],
+    body:`Auto-complete kode <b>inline</b> saat mengetik (Tab completion). Latency sangat rendah, model ringan, tidak membutuhkan kuota besar.`
+  },
+  {
+    id:'eslint', x:1130, y:840, type:'editor', icon:'✅', name:'ESLint & Prettier',
+    tag:'Linting & Format', ports:['input','output'],
+    proj:['p1'],
+    body:`Format kode otomatis & deteksi error sintaks. Dipanggil secara programatik oleh Roo Code sebelum <code style="font-family:monospace">git commit</code>.`
+  },
+  {
+    id:'gitlens', x:1130, y:980, type:'repo', icon:'🔍', name:'GitLens',
+    tag:'Git Context', ports:['input'],
+    proj:['p1','p2'],
+    body:`Tampilkan riwayat commit per baris kode. Memberi AI konteks mendalam tentang evolusi kode untuk analisis regresi.`
+  },
+  {
+    id:'pgexplorer', x:1130, y:1100, type:'backend', icon:'🗄️', name:'PostgreSQL Explorer',
+    tag:'DB Client', ports:['input'],
+    proj:['p1','p3'],
+    body:`Jelajahi tabel & schema Supabase PostgreSQL langsung di sidebar VS Code tanpa membuka dashboard web.`
+  },
+  {
+    id:'restclient', x:1130, y:1210, type:'editor', icon:'🌐', name:'REST Client / Thunder',
+    tag:'API Testing', ports:['input'],
+    proj:['p1','p6'],
+    body:`Uji HTTP request (webhook Telegram, Firebase, Supabase API) dari dalam VS Code menggunakan tab editor .http.`
+  },
+
+  // ── AI MODELS ──────────────────────────────────────────────────
+  {
+    id:'openrouter', x:1530, y:260, type:'ai', icon:'☁️', name:'OpenRouter (Gateway)',
+    tag:'AI Gateway – Cloud', ports:['input','output'],
+    proj:['p1','p2','p3','p4','p5','p6'],
+    body:`<b>Single endpoint</b> ke seluruh LLM premium. Profil model per tugas:<br>
+    <span class="node-badge" style="background:#dbeafe;color:#1e3a8a">qwen3-coder → [1] Coding</span>
+    <span class="node-badge" style="background:#fce7f3;color:#831843">hermes-3-405b → [2] Data</span>
+    <span class="node-badge" style="background:#dcfce7;color:#166534">llama-3.3-70b → [3] Naskah</span>
+    <span class="node-badge" style="background:#fef3c7;color:#92400e">nemotron-vl → [4] Vision</span>
+    <span class="node-badge" style="background:#f5f3ff;color:#4c1d95">openrouter/free → [5] Fallback</span>`
+  },
+  {
+    id:'ollama', x:1530, y:520, type:'ai', icon:'🔒', name:'Ollama (Local Models)',
+    tag:'AI Engine – Offline', ports:['input'],
+    proj:['p1','p4','p6'],
+    body:`Jalankan LLM <b>100% lokal, tanpa internet</b>. Cocok untuk data sensitif.<br>
+    <span class="node-badge">Llama 3.2</span><span class="node-badge">Mistral</span><span class="node-badge">Phi-3</span><span class="node-badge">CodeGemma</span><br>
+    Nol biaya. Privasi penuh. Tanpa rate-limit.`
+  },
+
+  // ── MCP SERVERS ────────────────────────────────────────────────
+  {
+    id:'mcp-tavily', x:1530, y:720, type:'mcp', icon:'🔍', name:'MCP: Tavily Search',
+    tag:'Web Search', ports:['input','output'],
+    proj:['p1','p3','p4','p6'],
+    body:`AI dapat mencari internet secara real-time melalui Tavily API. Digunakan untuk riset tren, fact-checking, dan scraping market data.`
+  },
+  {
+    id:'mcp-postgres', x:1530, y:860, type:'mcp', icon:'🐘', name:'MCP: PostgreSQL Server',
+    tag:'DB Access', ports:['input','output'],
+    proj:['p1','p3'],
+    body:`AI dapat menulis & mengeksekusi query SQL langsung ke <b>Supabase PostgreSQL</b>. Package: <code style="font-family:monospace;font-size:10px">@modelcontextprotocol/server-postgres</code>`
+  },
+  {
+    id:'mcp-telegram', x:1530, y:1000, type:'mcp', icon:'📣', name:'MCP: Telegram Notify',
+    tag:'Push Notification', ports:['input'],
+    proj:['p1','p6'],
+    body:`Custom Node.js MCP server lokal. Mengekspos tool <code style="font-family:monospace;font-size:10px">send_telegram_notification</code>. AI mengirim pesan ke HP Anda saat task selesai.`
+  },
+
+  // ── BACKEND & DATABASE ─────────────────────────────────────────
+  {
+    id:'supabase', x:1930, y:640, type:'backend', icon:'⚡', name:'Supabase Cloud',
+    tag:'PostgreSQL · Auth · Storage', ports:['input','output'],
+    proj:['p1','p3','p6'],
+    body:`<b>Backend utama Matra Aksara:</b>
+    <ul>
+      <li>PostgreSQL database serverless</li>
+      <li>Auth (JWT, OAuth, Magic Link)</li>
+      <li>File Storage (media, docs)</li>
+      <li>Edge Functions (serverless logic)</li>
+      <li>Realtime subscriptions via WebSocket</li>
+    </ul>`
+  },
+  {
+    id:'firebase', x:1930, y:900, type:'backend', icon:'🔥', name:'Firebase Realtime DB',
+    tag:'NoSQL · Realtime', ports:['input','output'],
+    proj:['p3','p5'],
+    body:`NoSQL realtime database. Diisi dari <b>Google Sheets via Apps Script</b>. Sinkronisasi data keuangan/inventori secara instan ke dashboard web.`
+  },
+  {
+    id:'gsheets', x:1930, y:1080, type:'backend', icon:'📊', name:'Google Sheets',
+    tag:'Data Input Layer', ports:['input','output'],
+    proj:['p3','p4'],
+    body:`Interface input data ramah pengguna awam. Didukung <b>Apps Script</b> sebagai middleware logika yang mendorong data ke Firebase atau Supabase.`
+  },
+
+  // ── REPOSITORY & DEVOPS ────────────────────────────────────────
+  {
+    id:'github', x:1930, y:360, type:'repo', icon:'🐙', name:'GitHub',
+    tag:'Version Control · CI/CD', ports:['input','output'],
+    proj:['p1','p2','p6'],
+    body:`Repository utama <code style="font-family:monospace;font-size:10px">matraaksara-dev</code>.
+    <ul>
+      <li>Auto-trigger Vercel deployment saat push</li>
+      <li>GitHub Actions workflows</li>
+      <li>VS Code Settings Sync backup</li>
+      <li>Manajemen PR via Roo Code</li>
+    </ul>`
+  },
+  {
+    id:'vercel', x:1930, y:200, type:'output', icon:'▲', name:'Vercel',
+    tag:'Hosting · CDN', ports:['input'],
+    proj:['p1','p2'],
+    body:`Deploy otomatis setiap <code style="font-family:monospace;font-size:10px">git push</code> ke GitHub. Hosting frontend (Next.js, React, HTML) dengan CDN global, HTTPS, dan domain custom.`
+  },
+
+  // ── AUTOMATION ─────────────────────────────────────────────────
+  {
+    id:'n8n', x:1930, y:1280, type:'auto', icon:'⚙️', name:'n8n Self-Hosted',
+    tag:'Workflow Automation', ports:['input','output'],
+    proj:['p6'],
+    body:`Visual workflow builder di <code style="font-family:monospace;font-size:10px">localhost:5678</code>. Dijalankan via <b>VS Code Task</b> (Ctrl+Shift+P → Run Task → "Start n8n Server"). Ribuan node integrasi tersedia.`
+  },
+  {
+    id:'makecom', x:1930, y:1420, type:'auto', icon:'🔗', name:'Make.com',
+    tag:'Cloud Automation', ports:['input','output'],
+    proj:['p6'],
+    body:`1.000 operasi/bulan gratis. Cocok untuk workflow cloud ringan. Terhubung ke OpenRouter API via HTTP Request module untuk AI workflow.`
+  },
+  {
+    id:'appscript', x:1530, y:1150, type:'auto', icon:'📜', name:'Google Apps Script',
+    tag:'Serverless Logic', ports:['input','output'],
+    proj:['p3','p4'],
+    body:`Engine logika di dalam Google Workspace. <b>Dirancang kodenya oleh Roo Code</b>, lalu di-paste ke Apps Script editor. Mendorong data Sheets → Firebase/Supabase.`
+  },
+
+  // ── HERMES AI AGENT ────────────────────────────────────────────
+  {
+    id:'hermes-agent', x:1930, y:1570, type:'agent', icon:'🤖', name:'Hermes AI Agent',
+    tag:'Telegram Bot · Node.js', ports:['input','output'],
+    proj:['p6'],
+    body:`Bot AI otonom berbasis <b>Telegraf + OpenRouter</b>. Model: <code style="font-family:monospace;font-size:10px">hermes-3-405b:free</code>.
+    <ul>
+      <li>Memori konteks per-user (10 pesan)</li>
+      <li>Notifikasi task completion dari Roo Code</li>
+      <li>Boilerplate di: telegram-hermes-agent/</li>
+    </ul>`
+  },
+  {
+    id:'telegram', x:2220, y:1570, type:'output', icon:'📱', name:'Telegram',
+    tag:'User Interface', ports:['input'],
+    proj:['p6'],
+    body:`Channel output ke pengguna akhir. Menerima:<br>
+    <span class="node-badge">Notifikasi Roo Code</span>
+    <span class="node-badge">Jawaban Hermes AI</span>
+    <span class="node-badge">Alert otomatisasi</span>`
+  },
+
+  // ── 6 PROJECT LANES ───────────────────────────────────────────
+  {
+    id:'lp1', x:320, y:100, type:'lane', proj:['p1'],
+    name:'01 · Full-Stack Coding', icon:'🖥️', tag:'HTML/CSS/JS · Next.js · API',
+    body:`<b>Tools aktif:</b> Roo Code, Continue.dev, ESLint, GitLens, PG Explorer, REST Client<br>
+    <b>AI:</b> Qwen3 Coder (utama), OpenRouter fallback<br>
+    <b>MCP:</b> Tavily (riset), PostgreSQL (query)<br>
+    <b>Repo:</b> GitHub → Vercel (auto-deploy)<br>
+    <b>DB:</b> Supabase PostgreSQL`
+  },
+  {
+    id:'lp2', x:320, y:300, type:'lane', proj:['p2'],
+    name:'02 · UI/UX Design', icon:'🎨', tag:'Mockup · Figma-to-Code · Vision AI',
+    body:`<b>Tools aktif:</b> Roo Code, Continue.dev, GitLens<br>
+    <b>AI:</b> Nemotron VL (screenshot → kode), Llama (copy teks UI)<br>
+    <b>MCP:</b> Tavily (referensi desain tren)<br>
+    <b>Output:</b> HTML/CSS komponen → GitHub → Vercel`
+  },
+  {
+    id:'lp3', x:320, y:500, type:'lane', proj:['p3'],
+    name:'03 · Data Analytics', icon:'📈', tag:'Dashboard · Finance · SQL',
+    body:`<b>Tools aktif:</b> Roo Code, PG Explorer<br>
+    <b>AI:</b> Hermes-3 (SQL & logika data)<br>
+    <b>MCP:</b> PostgreSQL (kueri langsung), Tavily (data enrichment)<br>
+    <b>DB:</b> Supabase + Firebase (dari Sheets via Apps Script)<br>
+    <b>Output:</b> Dashboard → Vercel`
+  },
+  {
+    id:'lp4', x:320, y:700, type:'lane', proj:['p4'],
+    name:'04 · Brainstorming & Strategi', icon:'💡', tag:'Riset · Konten · Market',
+    body:`<b>Tools aktif:</b> Roo Code<br>
+    <b>AI:</b> Llama 3.3 (naskah & ide), Ollama (privat/offline)<br>
+    <b>MCP:</b> Tavily (riset real-time tren pasar)<br>
+    <b>Data input:</b> Google Sheets → Apps Script<br>
+    <b>Output:</b> Dokumen PRD, copy teks, strategi`
+  },
+  {
+    id:'lp5', x:320, y:900, type:'lane', proj:['p5'],
+    name:'05 · Konten Visual', icon:'🎬', tag:'AI Image · Video · Multimedia',
+    body:`<b>Tools aktif:</b> Roo Code (scripting pipeline)<br>
+    <b>AI:</b> Nemotron VL (analisis gambar), OpenRouter (prompt generation)<br>
+    <b>External:</b> Midjourney, RunwayML, ElevenLabs API (via HTTP)<br>
+    <b>Storage:</b> Supabase Storage / Firebase Storage<br>
+    <b>Output:</b> Aset media terproses`
+  },
+  {
+    id:'lp6', x:320, y:1100, type:'lane', proj:['p6'],
+    name:'06 · AI Agent Setup', icon:'🤖', tag:'n8n · Hermes · Make.com',
+    body:`<b>Tools aktif:</b> Roo Code, REST Client<br>
+    <b>AI:</b> Hermes-3 (reasoning agent), Qwen3 (coding bot logic)<br>
+    <b>MCP:</b> Telegram Notify, PostgreSQL<br>
+    <b>Automation:</b> n8n (self-hosted), Make.com (cloud)<br>
+    <b>Agent:</b> Hermes AI Bot via Telegram<br>
+    <b>Repo:</b> GitHub (boilerplate)`
+  },
+];
+
+// ═══════════════════════════════════════════
+// DATA: EDGES  [from, to, proj, color?, dashed?]
+// ═══════════════════════════════════════════
+const EDGES = [
+  // VS Code core → extensions
+  {f:'vscode', t:'roocode',   proj:['p1','p2','p3','p4','p6'], col:'var(--color-accent)'},
+  {f:'vscode', t:'continue',  proj:['p1','p2'],                col:'#7c3aed'},
+  {f:'vscode', t:'eslint',    proj:['p1'],                     col:'#059669'},
+  {f:'vscode', t:'gitlens',   proj:['p1','p2'],                col:'#475569', dash:true},
+  {f:'vscode', t:'pgexplorer',proj:['p1','p3'],                col:'#059669', dash:true},
+  {f:'vscode', t:'restclient',proj:['p1','p6'],                col:'#b45309', dash:true},
+  // Roo Code → AI models
+  {f:'roocode', t:'openrouter',proj:['p1','p2','p3','p4','p5','p6'], col:'var(--color-accent)'},
+  {f:'roocode', t:'ollama',    proj:['p1','p4','p6'],                col:'#7c3aed'},
+  // Roo Code → MCP
+  {f:'roocode', t:'mcp-tavily',  proj:['p1','p3','p4','p6'], col:'#f59e0b'},
+  {f:'roocode', t:'mcp-postgres',proj:['p1','p3'],           col:'#f59e0b'},
+  {f:'roocode', t:'mcp-telegram',proj:['p6'],                col:'#f59e0b'},
+  // Roo Code → direct flows
+  {f:'roocode', t:'github',   proj:['p1','p2','p6'],  col:'#475569'},
+  {f:'roocode', t:'appscript',proj:['p3','p4'],       col:'#86198f', dash:true},
+  {f:'roocode', t:'n8n',      proj:['p6'],            col:'#86198f'},
+  // Linter feedback loop
+  {f:'eslint',  t:'roocode',  proj:['p1'], col:'#059669', dash:true},
+  // MCP → backends
+  {f:'mcp-postgres', t:'supabase', proj:['p1','p3'], col:'#22c55e'},
+  {f:'mcp-telegram', t:'telegram', proj:['p6'],       col:'#0ea5e9'},
+  // OpenRouter → hermes agent
+  {f:'openrouter', t:'hermes-agent', proj:['p6'], col:'#d946ef'},
+  // Backends
+  {f:'supabase', t:'github',  proj:['p1'],       col:'#475569', dash:true},
+  {f:'firebase', t:'supabase',proj:['p3'],       col:'#22c55e', dash:true},
+  {f:'gsheets',  t:'appscript',proj:['p3','p4'],col:'#86198f'},
+  {f:'appscript',t:'firebase',proj:['p3'],       col:'#dc2626'},
+  // Repo → hosting
+  {f:'github',   t:'vercel',  proj:['p1','p2'], col:'#0f172a'},
+  // Automation
+  {f:'n8n',      t:'telegram',proj:['p6'],       col:'#0ea5e9'},
+  {f:'makecom',  t:'openrouter',proj:['p6'],     col:'var(--color-accent)', dash:true},
+  {f:'n8n',      t:'supabase',  proj:['p6'],     col:'#22c55e', dash:true},
+  // Hermes agent
+  {f:'hermes-agent', t:'telegram', proj:['p6'], col:'#0ea5e9'},
+  // Project lanes → VS Code (abstract reference)
+  {f:'lp1', t:'vscode', proj:['p1'], col:'var(--p1)', dash:true},
+  {f:'lp2', t:'vscode', proj:['p2'], col:'var(--p2)', dash:true},
+  {f:'lp3', t:'vscode', proj:['p3'], col:'var(--p3)', dash:true},
+  {f:'lp4', t:'vscode', proj:['p4'], col:'var(--p4)', dash:true},
+  {f:'lp5', t:'vscode', proj:['p5'], col:'var(--p5)', dash:true},
+  {f:'lp6', t:'vscode', proj:['p6'], col:'var(--p6)', dash:true},
+];
+
+// ═══════════════════════════════════════════
+// THEME LOOKUP
+// ═══════════════════════════════════════════
+const THEMES = {
+  editor: {bg:'var(--cat-editor-bg)',   color:'var(--cat-editor)',   bdr:'var(--cat-editor-bdr)'},
+  ai:     {bg:'var(--cat-ai-bg)',       color:'var(--cat-ai)',       bdr:'var(--cat-ai-bdr)'},
+  mcp:    {bg:'var(--cat-mcp-bg)',      color:'var(--cat-mcp)',      bdr:'var(--cat-mcp-bdr)'},
+  backend:{bg:'var(--cat-backend-bg)',  color:'var(--cat-backend)',  bdr:'var(--cat-backend-bdr)'},
+  repo:   {bg:'var(--cat-repo-bg)',     color:'var(--cat-repo)',     bdr:'var(--cat-repo-bdr)'},
+  auto:   {bg:'var(--cat-auto-bg)',     color:'var(--cat-auto)',     bdr:'var(--cat-auto-bdr)'},
+  agent:  {bg:'var(--cat-agent-bg)',    color:'var(--cat-agent)',    bdr:'var(--cat-agent-bdr)'},
+  output: {bg:'var(--cat-output-bg)',   color:'var(--cat-output)',   bdr:'var(--cat-output-bdr)'},
+  lane:   {bg:'#fff',                   color:'#0f172a',             bdr:'#94a3b8'},
+};
+const PROJ_COLORS = {p1:'var(--p1)',p2:'var(--p2)',p3:'var(--p3)',p4:'var(--p4)',p5:'var(--p5)',p6:'var(--p6)'};
+
+// ═══════════════════════════════════════════
+// RENDER ENGINE
+// ═══════════════════════════════════════════
+const canvas      = document.getElementById('canvas');
+const workspace   = document.getElementById('workspace');
+const nodeContainer = document.getElementById('node-container');
+const svgLayer    = document.getElementById('svg-layer');
+
+let panX=60, panY=20, scale=0.72;
+let isPanning=false, panSX=0, panSY=0;
+let dragNode=null, dragNX=0, dragNY=0, dragMX=0, dragMY=0;
+let activeProj='all';
+
+function applyTransform(){
+  workspace.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
+  canvas.style.backgroundPosition=`${panX}px ${panY}px`;
+  canvas.style.backgroundSize=`${28*scale}px ${28*scale}px`;
+}
+
+function resetView(){panX=60;panY=20;scale=0.72;applyTransform();}
+
+function nodeById(id){ return NODES.find(n=>n.id===id); }
+
+function nodeEl(id){ return document.getElementById('nd-'+id); }
+
+// Build node HTML
+function buildNode(n){
+  const th = THEMES[n.type] || THEMES.editor;
+  const isLane = n.type==='lane';
+  const div = document.createElement('div');
+  div.className = 'node' + (isLane?' lane-label':'');
+  div.id = 'nd-'+n.id;
+  div.style.left = n.x+'px';
+  div.style.top  = n.y+'px';
+  if(isLane){ div.style.width='240px'; div.style.borderColor=th.bdr; }
+
+  let portsHtml='';
+  if(!isLane){
+    if((n.ports||[]).includes('input'))  portsHtml+=`<div class="port input"></div>`;
+    if((n.ports||[]).includes('output')) portsHtml+=`<div class="port output"></div>`;
+  }
+
+  div.innerHTML=`
+    <div class="node-header" style="background:${th.bg};color:${th.color};border-left:4px solid ${th.bdr}">
+      <div class="node-icon">${n.icon||'📦'}</div>
+      <div class="node-name">${n.name}</div>
+      ${n.tag?`<div class="node-tag">${n.tag}</div>`:''}
+    </div>
+    <div class="node-body">${n.body||''}</div>
+    ${portsHtml}
+  `;
+
+  if(!isLane){
+    div.addEventListener('mousedown',e=>{
+      e.stopPropagation();
+      dragNode=n; dragNX=n.x; dragNY=n.y; dragMX=e.clientX; dragMY=e.clientY;
+      div.style.zIndex=50;
+    });
+  }
+  return div;
+}
+
+function renderNodes(){
+  nodeContainer.innerHTML='';
+  NODES.forEach(n=>{ nodeContainer.appendChild(buildNode(n)); });
+}
+
+// Draw a bezier path between two node rects
+function portPos(nd, side){
+  const el = nodeEl(nd.id);
+  if(!el) return {x:nd.x, y:nd.y};
+  const h = el.offsetHeight;
+  const w = el.offsetWidth || 230;
+  if(side==='output') return {x:nd.x+w, y:nd.y+h/2};
+  return {x:nd.x, y:nd.y+h/2};
+}
+
+function drawEdge(edge){
+  const fn = nodeById(edge.f);
+  const tn = nodeById(edge.t);
+  if(!fn||!tn) return [];
+
+  const from = portPos(fn,'output');
+  const to   = portPos(tn,'input');
+  const cx   = Math.abs(to.x-from.x)*0.5;
+  const d = `M${from.x},${from.y} C${from.x+cx},${from.y} ${to.x-cx},${to.y} ${to.x},${to.y}`;
+  const col = edge.col||'#94a3b8';
+
+  const paths=[];
+
+  // Solid backing
+  const solid = document.createElementNS('http://www.w3.org/2000/svg','path');
+  solid.setAttribute('d',d);
+  solid.setAttribute('class','edge-solid');
+  solid.setAttribute('stroke',col);
+  solid.setAttribute('opacity','0.55');
+  solid.dataset.edge=edge.f+'_'+edge.t;
+  solid.dataset.proj=JSON.stringify(edge.proj||[]);
+  paths.push(solid);
+
+  // Animated flow
+  const flow = document.createElementNS('http://www.w3.org/2000/svg','path');
+  flow.setAttribute('d',d);
+  flow.setAttribute('class','edge-flow');
+  flow.setAttribute('stroke',col);
+  flow.dataset.edge=edge.f+'_'+edge.t;
+  flow.dataset.proj=JSON.stringify(edge.proj||[]);
+  if(edge.dash) flow.style.opacity='0.35';
+  paths.push(flow);
+
+  return paths;
+}
+
+function renderEdges(){
+  // Remove existing paths but keep defs
+  [...svgLayer.querySelectorAll('path')].forEach(p=>p.remove());
+  EDGES.forEach(e=>{ drawEdge(e).forEach(p=>svgLayer.appendChild(p)); });
+}
+
+// ═══════════════════════════════════════════
+// PROJECT FILTER
+// ═══════════════════════════════════════════
+function filterProject(proj){
+  activeProj = proj;
+  // Tab styling
+  document.querySelectorAll('.ptab').forEach(t=>{
+    t.classList.remove('active');
+    const p=t.dataset.proj;
+    t.style.background='rgba(255,255,255,.9)';
+    t.style.color=p==='all'?'var(--color-primary)':PROJ_COLORS[p]||'#333';
+  });
+  const active=document.querySelector(`.ptab[data-proj="${proj}"]`);
+  if(active){
+    active.classList.add('active');
+    const col=proj==='all'?'var(--color-primary)':PROJ_COLORS[proj];
+    active.style.background=col; active.style.color='#fff';
+  }
+
+  // Nodes
+  document.querySelectorAll('.node').forEach(el=>{
+    const nd=NODES.find(n=>'nd-'+n.id===el.id);
+    if(!nd) return;
+    if(proj==='all'||nd.proj.includes(proj)){
+      el.classList.remove('dim');
+    } else {
+      el.classList.add('dim');
+    }
+  });
+
+  // Edges
+  svgLayer.querySelectorAll('path').forEach(p=>{
+    const eProj=JSON.parse(p.dataset.proj||'[]');
+    if(proj==='all'||eProj.includes(proj)){
+      p.style.display='';
+    } else {
+      p.style.display='none';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════
+window.addEventListener('mousemove',e=>{
+  if(isPanning){
+    panX+=(e.clientX-panSX); panY+=(e.clientY-panSY);
+    panSX=e.clientX; panSY=e.clientY;
+    applyTransform();
+  } else if(dragNode){
+    const dx=(e.clientX-dragMX)/scale;
+    const dy=(e.clientY-dragMY)/scale;
+    dragNode.x=dragNX+dx; dragNode.y=dragNY+dy;
+    const el=nodeEl(dragNode.id);
+    if(el){ el.style.left=dragNode.x+'px'; el.style.top=dragNode.y+'px'; }
+    renderEdges();
+    if(activeProj!=='all') filterProject(activeProj); // reapply filter visibility
+  }
+});
+window.addEventListener('mouseup',()=>{ isPanning=false; dragNode=null; });
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.target===canvas||e.target===workspace||e.target===svgLayer||e.target.tagName==='path'){
+    isPanning=true; panSX=e.clientX; panSY=e.clientY;
+  }
+});
+
+// Zoom
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const delta = e.deltaY>0?-0.06:0.06;
+  const newScale=Math.min(2,Math.max(0.25,scale+delta));
+  // Zoom toward mouse pos
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  panX = mx - (mx-panX)*(newScale/scale);
+  panY = my - (my-panY)*(newScale/scale);
+  scale=newScale;
+  applyTransform();
+},{passive:false});
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.onload=()=>{
+  renderNodes();
+  setTimeout(()=>{
+    renderEdges();
+    applyTransform();
+  },30);
+};
+window.addEventListener('resize',()=>{ renderEdges(); });
+</script>
+</body>
+</html>
